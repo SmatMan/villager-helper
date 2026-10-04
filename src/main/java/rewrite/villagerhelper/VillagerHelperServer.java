@@ -50,7 +50,7 @@ public class VillagerHelperServer implements ModInitializer {
                 ServerLevel level = (ServerLevel) ctx.player().level();
                 BlockPos target = payload.blockPos();
 
-                level.getEntitiesOfClass(Villager.class, AABB.ofSize(target.getCenter(), 64, 64, 64))
+                level.getEntitiesOfClass(Villager.class, AABB.ofSize(new net.minecraft.world.phys.Vec3(target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5), 64, 64, 64))
                     .stream()
                     .filter(v -> {
                         Optional<BlockPos> home = v.getBrain().getMemory(MemoryModuleType.HOME).map(GlobalPos::pos);
