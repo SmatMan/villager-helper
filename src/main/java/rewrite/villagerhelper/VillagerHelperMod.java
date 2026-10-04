@@ -7,6 +7,8 @@ import rewrite.villagerhelper.network.PoiCache;
 import rewrite.villagerhelper.network.SelectedVillagers;
 import rewrite.villagerhelper.network.VillagerPoiRequestPacket;
 import rewrite.villagerhelper.network.VillagerPoiResponsePacket;
+import rewrite.villagerhelper.network.VillagerUnlinkRequestPacket;
+import rewrite.villagerhelper.network.VillagerLinkRequestPacket;
 import rewrite.villagerhelper.renderers.PoiRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -20,7 +22,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.ai.village.poi.PoiTypes;
+import net.minecraft.world.item.Items;
+import java.util.Iterator;
+
 public class VillagerHelperMod implements ClientModInitializer {
     public static final VHLogger LOGGER = new VHLogger(VillagerHelperMod.class);
     public static final String MOD_ID = "villagerhelper";
@@ -61,6 +65,16 @@ public class VillagerHelperMod implements ClientModInitializer {
             if (!world.isClientSide()) return InteractionResult.PASS;
 
             int id = villager.getId();
+            
+            // Unlink logic
+            if (player.getItemInHand(hand).is(Items.TORCH)) {
+                if (ClientPlayNetworking.canSend(VillagerUnlinkRequestPacket.TYPE)) {
+                    ClientPlayNetworking.send(new VillagerUnlinkRequestPacket(id));
+                    if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendOverlayMessage(Component.literal("Unlinked villager POIs!"));
+                }
+                return InteractionResult.SUCCESS;
+            }
+
             boolean nowSelected = SelectedVillagers.toggle(id);
 
             if (nowSelected && ClientPlayNetworking.canSend(VillagerPoiRequestPacket.TYPE)) {
@@ -78,6 +92,22 @@ public class VillagerHelperMod implements ClientModInitializer {
             if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
             if (!player.isShiftKeyDown()) return InteractionResult.PASS;
             if (!world.isClientSide()) return InteractionResult.PASS;
+
+            // Link logic
+            if (player.getItemInHand(hand).is(Items.TORCH)) {
+                Iterator<Integer> it = SelectedVillagers.getSelected().iterator();
+                if (!it.hasNext()) {
+                    if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendOverlayMessage(Component.literal("Select a villager first!"));
+                } else {
+                    int id = it.next();
+                    if (ClientPlayNetworking.canSend(VillagerLinkRequestPacket.TYPE)) {
+                        ClientPlayNetworking.send(new VillagerLinkRequestPacket(id, hitResult.getBlockPos()));
+                        if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendOverlayMessage(Component.literal("Linked villager to POI!"));
+                    }
+                }
+                return InteractionResult.SUCCESS;
+            }
+
             if (ClientPlayNetworking.canSend(BlockPoiRequestPacket.TYPE)) {
                 ClientPlayNetworking.send(new BlockPoiRequestPacket(hitResult.getBlockPos()));
             }
