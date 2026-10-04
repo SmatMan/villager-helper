@@ -33,15 +33,18 @@ public class VillagerHelperMod implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(BlockPoiResponsePacket.TYPE, (payload, ctx) -> {
             if (!payload.found()) {
-                Minecraft.getInstance().gui.setOverlayMessage(
-                    Component.literal("No villager owns this block"), false);
+                if (Minecraft.getInstance().player != null) {
+                    Minecraft.getInstance().player.sendOverlayMessage(Component.literal("No villager owns this block"));
+                }
                 return;
             }
             boolean nowSelected = SelectedVillagers.toggle(payload.entityId());
             if (nowSelected) {
                 PoiCache.put(payload.entityId(), payload.bedPos(), payload.jobPos());
+                if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendOverlayMessage(Component.literal("Selected villager for this POI"));
             } else {
                 PoiCache.remove(payload.entityId());
+                if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendOverlayMessage(Component.literal("Deselected villager for this POI"));
             }
         });
 
@@ -62,6 +65,9 @@ public class VillagerHelperMod implements ClientModInitializer {
 
             if (nowSelected && ClientPlayNetworking.canSend(VillagerPoiRequestPacket.TYPE)) {
                 ClientPlayNetworking.send(new VillagerPoiRequestPacket(id));
+                if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendOverlayMessage(Component.literal("Selected villager!"));
+            } else if (!nowSelected) {
+                if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendOverlayMessage(Component.literal("Deselected villager!"));
             }
 
             return InteractionResult.SUCCESS;
@@ -72,7 +78,6 @@ public class VillagerHelperMod implements ClientModInitializer {
             if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
             if (!player.isShiftKeyDown()) return InteractionResult.PASS;
             if (!world.isClientSide()) return InteractionResult.PASS;
-            if (!PoiTypes.hasPoi(world.getBlockState(hitResult.getBlockPos()))) return InteractionResult.PASS;
             if (ClientPlayNetworking.canSend(BlockPoiRequestPacket.TYPE)) {
                 ClientPlayNetworking.send(new BlockPoiRequestPacket(hitResult.getBlockPos()));
             }

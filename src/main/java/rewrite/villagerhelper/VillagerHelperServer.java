@@ -48,7 +48,12 @@ public class VillagerHelperServer implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(BlockPoiRequestPacket.TYPE, (payload, ctx) -> {
             ctx.server().execute(() -> {
                 ServerLevel level = (ServerLevel) ctx.player().level();
-                BlockPos target = payload.blockPos();
+                BlockPos initialTarget = payload.blockPos();
+                net.minecraft.world.level.block.state.BlockState state = level.getBlockState(initialTarget);
+                if (state.getBlock() instanceof net.minecraft.world.level.block.BedBlock && state.getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.FOOT) {
+                    initialTarget = initialTarget.relative(net.minecraft.world.level.block.BedBlock.getConnectedDirection(state));
+                }
+                final BlockPos target = initialTarget;
 
                 level.getEntitiesOfClass(Villager.class, AABB.ofSize(new net.minecraft.world.phys.Vec3(target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5), 64, 64, 64))
                     .stream()
